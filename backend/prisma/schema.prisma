@@ -64,6 +64,7 @@ model Event {
   organizerId String
 
   title       String
+  slug        String     @unique
   description String?
   type        EventType
 

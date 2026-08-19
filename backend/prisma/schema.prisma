@@ -24,6 +24,7 @@ model User {
 model Event {
   id           String        @id @default(uuid())
   organizerId  String
+  tmdbMovieId  Int?
   title        String
   description  String?
   type         EventType
@@ -43,6 +44,7 @@ model Event {
   @@index([organizerId])
   @@index([status])
   @@index([startAt])
+  @@index([tmdbMovieId])
   @@map("events")
 }
 

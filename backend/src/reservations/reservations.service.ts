@@ -22,45 +22,92 @@ export class ReservationsService {
             quantity,
         } = createReservationDto;
 
-        const event = await this.prisma.event.findUnique({
-            where: {
-                id: eventId,
-            },
-        });
+        return this.prisma.$transaction(async (tx) => {
+            await tx.$queryRaw`
+            SELECT id
+            FROM events
+            WHERE id = ${eventId}
+            FOR UPDATE
+        `;
 
-        if (!event) {
-            throw new NotFoundException('Event not found');
-        }
+            const event = await tx.event.findUnique({
+                where: {
+                    id: eventId,
+                },
+            });
 
-        if (event.status !== 'PUBLISHED') {
-            throw new BadRequestException(
-                'Event is not available for reservation',
+            if (!event) {
+                throw new NotFoundException('Event not found');
+            }
+
+            if (event.status !== 'PUBLISHED') {
+                throw new BadRequestException(
+                    'Event is not available for reservation',
+                );
+            }
+
+            const now = new Date();
+
+            const reservations = await tx.reservation.findMany({
+                where: {
+                    eventId,
+                    OR: [
+                        {
+                            status: 'CONFIRMED',
+                        },
+                        {
+                            status: 'PENDING',
+                            OR: [
+                                {
+                                    expiresAt: null,
+                                },
+                                {
+                                    expiresAt: {
+                                        gt: now,
+                                    },
+                                },
+                            ],
+                        },
+                    ],
+                },
+                select: {
+                    quantity: true,
+                },
+            });
+
+            const reservedQuantity = reservations.reduce(
+                (total, reservation) =>
+                    total + reservation.quantity,
+                0,
             );
-        }
 
-        if (quantity > event.capacity) {
-            throw new BadRequestException(
-                'Not enough tickets available',
+            const availableQuantity =
+                event.capacity - reservedQuantity;
+
+            if (quantity > availableQuantity) {
+                throw new BadRequestException(
+                    'Not enough tickets available',
+                );
+            }
+
+            const totalAmount =
+                Number(event.ticketPrice) * quantity;
+
+            const expiresAt = new Date(
+                Date.now() + 15 * 60 * 1000,
             );
-        }
 
-        const totalAmount =
-            Number(event.ticketPrice) * quantity;
-
-        const expiresAt = new Date(
-            Date.now() + 15 * 60 * 1000,
-        );
-
-        return this.prisma.reservation.create({
-            data: {
-                customerId,
-                eventId,
-                quantity,
-                unitPrice: event.ticketPrice,
-                totalAmount,
-                status: 'PENDING',
-                expiresAt,
-            },
+            return tx.reservation.create({
+                data: {
+                    customerId,
+                    eventId,
+                    quantity,
+                    unitPrice: event.ticketPrice,
+                    totalAmount,
+                    status: 'PENDING',
+                    expiresAt,
+                },
+            });
         });
     }
 

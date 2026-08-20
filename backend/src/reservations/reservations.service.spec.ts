@@ -10,6 +10,7 @@ describe('ReservationsService', () => {
     let service: ReservationsService;
 
     let prismaService: {
+        $transaction: jest.Mock;
         event: {
             findUnique: jest.Mock;
         };
@@ -20,8 +21,31 @@ describe('ReservationsService', () => {
         };
     };
 
+    let transaction: {
+        $queryRaw: jest.Mock;
+        event: {
+            findUnique: jest.Mock;
+        };
+        reservation: {
+            findMany: jest.Mock;
+            create: jest.Mock;
+        };
+    };
+
     beforeEach(() => {
+        transaction = {
+            $queryRaw: jest.fn(),
+            event: {
+                findUnique: jest.fn(),
+            },
+            reservation: {
+                findMany: jest.fn(),
+                create: jest.fn(),
+            },
+        };
+
         prismaService = {
+            $transaction: jest.fn(),
             event: {
                 findUnique: jest.fn(),
             },
@@ -32,6 +56,10 @@ describe('ReservationsService', () => {
             },
         };
 
+        prismaService.$transaction.mockImplementation(
+            async (callback) => callback(transaction),
+        );
+
         service = new ReservationsService(
             prismaService as unknown as PrismaService,
         );
@@ -39,7 +67,7 @@ describe('ReservationsService', () => {
 
     describe('create', () => {
         const customerId =
-            'customer-123';
+         'customer-123';
 
         const createReservationDto = {
             eventId: 'event-123',
@@ -65,11 +93,13 @@ describe('ReservationsService', () => {
                 status: 'PENDING',
             };
 
-            prismaService.event.findUnique.mockResolvedValue(
+            transaction.event.findUnique.mockResolvedValue(
                 publishedEvent,
             );
 
-            prismaService.reservation.create.mockResolvedValue(
+            transaction.reservation.findMany.mockResolvedValue([]);
+
+            transaction.reservation.create.mockResolvedValue(
                 reservation,
             );
 
@@ -79,7 +109,15 @@ describe('ReservationsService', () => {
             );
 
             expect(
-                prismaService.event.findUnique,
+                prismaService.$transaction,
+            ).toHaveBeenCalledTimes(1);
+
+            expect(
+                transaction.$queryRaw,
+            ).toHaveBeenCalled();
+
+            expect(
+                transaction.event.findUnique,
             ).toHaveBeenCalledWith({
                 where: {
                     id: 'event-123',
@@ -87,7 +125,20 @@ describe('ReservationsService', () => {
             });
 
             expect(
-                prismaService.reservation.create,
+                transaction.reservation.findMany,
+            ).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    where: expect.objectContaining({
+                        eventId: 'event-123',
+                    }),
+                    select: {
+                        quantity: true,
+                    },
+                }),
+            );
+
+            expect(
+                transaction.reservation.create,
             ).toHaveBeenCalledWith(
                 expect.objectContaining({
                     data: expect.objectContaining({
@@ -106,7 +157,7 @@ describe('ReservationsService', () => {
         });
 
         it('should throw NotFoundException when event does not exist', async () => {
-            prismaService.event.findUnique.mockResolvedValue(
+            transaction.event.findUnique.mockResolvedValue(
                 null,
             );
 
@@ -120,12 +171,16 @@ describe('ReservationsService', () => {
             );
 
             expect(
-                prismaService.reservation.create,
+                transaction.reservation.findMany,
+            ).not.toHaveBeenCalled();
+
+            expect(
+                transaction.reservation.create,
             ).not.toHaveBeenCalled();
         });
 
         it('should throw BadRequestException when event is not published', async () => {
-            prismaService.event.findUnique.mockResolvedValue({
+            transaction.event.findUnique.mockResolvedValue({
                 ...publishedEvent,
                 status: 'DRAFT',
             });
@@ -142,15 +197,24 @@ describe('ReservationsService', () => {
             );
 
             expect(
-                prismaService.reservation.create,
+                transaction.reservation.findMany,
+            ).not.toHaveBeenCalled();
+
+            expect(
+                transaction.reservation.create,
             ).not.toHaveBeenCalled();
         });
 
-        it('should throw BadRequestException when quantity exceeds capacity', async () => {
-            prismaService.event.findUnique.mockResolvedValue({
-                ...publishedEvent,
-                capacity: 1,
-            });
+        it('should throw BadRequestException when quantity exceeds available capacity', async () => {
+            transaction.event.findUnique.mockResolvedValue(
+                publishedEvent,
+            );
+
+            transaction.reservation.findMany.mockResolvedValue([
+                {
+                    quantity: 99,
+                },
+            ]);
 
             await expect(
                 service.create(
@@ -164,7 +228,7 @@ describe('ReservationsService', () => {
             );
 
             expect(
-                prismaService.reservation.create,
+                transaction.reservation.create,
             ).not.toHaveBeenCalled();
         });
     });

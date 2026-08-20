@@ -1,69 +1,107 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+import { EventCard } from '@/components/EventCard/EventCard';
+import { apiFetch } from '@/services/api';
+import type { Event } from '@/types/event';
 
-export default function Home() {
+import styles from './page.module.css';
+
+export default async function Home() {
+  let events: Event[] = [];
+  let error = false;
+
+  try {
+    events = await apiFetch<Event[]>('/events');
+  } catch {
+    error = true;
+  }
+
+  const publishedEvents = events.filter(
+    (event) => event.status === 'PUBLISHED',
+  );
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
+    <main>
+      <section className={styles.hero}>
+        <div className={styles.heroContent}>
+          <span className={styles.eyebrow}>
+            EVENT PLATFORM
+          </span>
+
           <h1>
-            To get started, edit the{" "}
-            <code className={styles.code}>page.tsx</code> file.
+            Encontre seu próximo
+            <span> evento.</span>
           </h1>
+
           <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
+            Descubra filmes, shows e experiências
+            especiais perto de você.
           </p>
-        </div>
-        <div className={styles.ctas}>
+
           <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="#events"
+            className={styles.heroButton}
           >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
+            Explorar eventos
           </a>
         </div>
-      </main>
-    </div>
+      </section>
+
+      <section
+        id="events"
+        className={styles.eventsSection}
+      >
+        <div className={styles.sectionHeader}>
+          <div>
+            <span className={styles.sectionLabel}>
+              AGENDA
+            </span>
+
+            <h2>
+              Eventos disponíveis
+            </h2>
+          </div>
+
+          <span className={styles.eventCount}>
+            {publishedEvents.length}{' '}
+            {publishedEvents.length === 1
+              ? 'evento'
+              : 'eventos'}
+          </span>
+        </div>
+
+        {error ? (
+          <div className={styles.message}>
+            <h3>
+              Não foi possível carregar
+              os eventos.
+            </h3>
+
+            <p>
+              Verifique se o servidor está
+              disponível e tente novamente.
+            </p>
+          </div>
+        ) : publishedEvents.length === 0 ? (
+          <div className={styles.message}>
+            <h3>
+              Nenhum evento disponível.
+            </h3>
+
+            <p>
+              Novos eventos serão publicados
+              em breve.
+            </p>
+          </div>
+        ) : (
+          <div className={styles.grid}>
+            {publishedEvents.map((event) => (
+              <EventCard
+                key={event.id}
+                event={event}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+    </main>
   );
 }

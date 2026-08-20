@@ -59,7 +59,7 @@ export function EventCard({
                     </strong>
 
                     <Link
-                        href={`/ events / ${event.id} `}
+                        href={`/events/${event.id}`}
                         className={styles.button}
                     >
                         Ver evento

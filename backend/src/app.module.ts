@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { TmdbModule } from './tmdb/tmdb.module';
 import { EventsModule } from './events/events.module';
 import { ReservationsModule } from './reservations/reservations.module';
+import { TicketsModule } from './tickets/tickets.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ReservationsModule } from './reservations/reservations.module';
     TmdbModule,
     EventsModule,
     ReservationsModule,
+    TicketsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

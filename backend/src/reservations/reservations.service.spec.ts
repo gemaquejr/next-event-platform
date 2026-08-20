@@ -29,6 +29,12 @@ describe('ReservationsService', () => {
         reservation: {
             findMany: jest.Mock;
             create: jest.Mock;
+            findFirst: jest.Mock;
+            update: jest.Mock;
+            findUnique: jest.Mock;
+        };
+        ticket: {
+            createMany: jest.Mock;
         };
     };
 
@@ -41,6 +47,12 @@ describe('ReservationsService', () => {
             reservation: {
                 findMany: jest.fn(),
                 create: jest.fn(),
+                findFirst: jest.fn(),
+                update: jest.fn(),
+                findUnique: jest.fn(),
+            },
+            ticket: {
+                createMany: jest.fn(),
             },
         };
 
@@ -67,7 +79,7 @@ describe('ReservationsService', () => {
 
     describe('create', () => {
         const customerId =
-         'customer-123';
+            'customer-123';
 
         const createReservationDto = {
             eventId: 'event-123',
@@ -229,6 +241,198 @@ describe('ReservationsService', () => {
 
             expect(
                 transaction.reservation.create,
+            ).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('confirm', () => {
+        const customerId = 'customer-123';
+        const reservationId = 'reservation-123';
+
+        it('should confirm a pending reservation and create tickets', async () => {
+            const reservation = {
+                id: reservationId,
+                customerId,
+                eventId: 'event-123',
+                quantity: 2,
+                unitPrice: 35,
+                totalAmount: 70,
+                status: 'PENDING',
+                expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+            };
+
+            const confirmedReservation = {
+                ...reservation,
+                status: 'CONFIRMED',
+            };
+
+            const tickets = [
+                {
+                    id: 'ticket-1',
+                    reservationId,
+                    code: 'ticket-code-1',
+                    status: 'ACTIVE',
+                },
+                {
+                    id: 'ticket-2',
+                    reservationId,
+                    code: 'ticket-code-2',
+                    status: 'ACTIVE',
+                },
+            ];
+
+            transaction.reservation.findFirst.mockResolvedValue(
+                reservation,
+            );
+
+            transaction.reservation.update.mockResolvedValue(
+                confirmedReservation,
+            );
+
+            transaction.ticket.createMany.mockResolvedValue({
+                count: 2,
+            });
+
+            transaction.reservation.findUnique.mockResolvedValue({
+                ...confirmedReservation,
+                tickets,
+            });
+
+            const result = await service.confirm(
+                reservationId,
+                customerId,
+            );
+
+            expect(
+                transaction.reservation.findFirst,
+            ).toHaveBeenCalledWith({
+                where: {
+                    id: reservationId,
+                    customerId,
+                },
+            });
+
+            expect(
+                transaction.reservation.update,
+            ).toHaveBeenCalledWith({
+                where: {
+                    id: reservationId,
+                },
+                data: {
+                    status: 'CONFIRMED',
+                },
+            });
+
+            expect(
+                transaction.ticket.createMany,
+            ).toHaveBeenCalledWith({
+                data: expect.arrayContaining([
+                    expect.objectContaining({
+                        reservationId,
+                        status: 'ACTIVE',
+                        code: expect.any(String),
+                    }),
+                    expect.objectContaining({
+                        reservationId,
+                        status: 'ACTIVE',
+                        code: expect.any(String),
+                    }),
+                ]),
+            });
+
+            expect(
+                transaction.ticket.createMany.mock.calls[0][0].data,
+            ).toHaveLength(2);
+
+            expect(
+                transaction.reservation.findUnique,
+            ).toHaveBeenCalledWith({
+                where: {
+                    id: reservationId,
+                },
+                include: {
+                    tickets: true,
+                },
+            });
+
+            expect(result).toEqual({
+                ...confirmedReservation,
+                tickets,
+            });
+        });
+
+        it('should throw NotFoundException when reservation does not exist', async () => {
+            transaction.reservation.findFirst.mockResolvedValue(
+                null,
+            );
+
+            await expect(
+                service.confirm(
+                    reservationId,
+                    customerId,
+                ),
+            ).rejects.toThrow(
+                new NotFoundException(
+                    'Reservation not found',
+                ),
+            );
+
+            expect(
+                transaction.reservation.update,
+            ).not.toHaveBeenCalled();
+        });
+
+        it('should throw BadRequestException when reservation is not pending', async () => {
+            transaction.reservation.findFirst.mockResolvedValue({
+                id: reservationId,
+                customerId,
+                status: 'CONFIRMED',
+                quantity: 2,
+                expiresAt: new Date(
+                    Date.now() + 10 * 60 * 1000,
+                ),
+            });
+
+            await expect(
+                service.confirm(
+                    reservationId,
+                    customerId,
+                ),
+            ).rejects.toThrow(
+                new BadRequestException(
+                    'Reservation cannot be confirmed',
+                ),
+            );
+
+            expect(
+                transaction.reservation.update,
+            ).not.toHaveBeenCalled();
+        });
+
+        it('should throw BadRequestException when reservation has expired', async () => {
+            transaction.reservation.findFirst.mockResolvedValue({
+                id: reservationId,
+                customerId,
+                status: 'PENDING',
+                quantity: 2,
+                expiresAt: new Date(
+                    Date.now() - 60 * 1000,
+                ),
+            });
+
+            await expect(
+                service.confirm(
+                    reservationId,
+                    customerId,
+                ),
+            ).rejects.toThrow(
+                new BadRequestException(
+                    'Reservation has expired',
+                ),
+            );
+
+            expect(
+                transaction.reservation.update,
             ).not.toHaveBeenCalled();
         });
     });

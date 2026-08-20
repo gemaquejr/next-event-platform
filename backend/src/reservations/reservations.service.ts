@@ -6,6 +6,7 @@ import {
 
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateReservationDto } from './dto/create-reservation.dto';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class ReservationsService {
@@ -141,5 +142,71 @@ export class ReservationsService {
         }
 
         return reservation;
+    }
+
+    async confirm(
+        id: string,
+        customerId: string,
+    ) {
+        return this.prisma.$transaction(async (tx) => {
+            const reservation =
+                await tx.reservation.findFirst({
+                    where: {
+                        id,
+                        customerId,
+                    },
+                });
+
+            if (!reservation) {
+                throw new NotFoundException(
+                    'Reservation not found',
+                );
+            }
+
+            if (reservation.status !== 'PENDING') {
+                throw new BadRequestException(
+                    'Reservation cannot be confirmed',
+                );
+            }
+
+            if (
+                reservation.expiresAt &&
+                reservation.expiresAt <= new Date()
+            ) {
+                throw new BadRequestException(
+                    'Reservation has expired',
+                );
+            }
+
+            const confirmedReservation =
+                await tx.reservation.update({
+                    where: {
+                        id: reservation.id,
+                    },
+                    data: {
+                        status: 'CONFIRMED',
+                    },
+                });
+
+            await tx.ticket.createMany({
+                data: Array.from(
+                    { length: reservation.quantity },
+                    () => ({
+                        reservationId: reservation.id,
+                        code: randomUUID(),
+                        status: 'ACTIVE' as const,
+                    }),
+                ),
+            });
+
+            return tx.reservation.findUnique({
+                where: {
+                    id: confirmedReservation.id,
+                },
+                include: {
+                    tickets: true,
+                },
+            });
+        });
     }
 }

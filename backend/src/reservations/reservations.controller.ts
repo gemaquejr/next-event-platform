@@ -57,4 +57,16 @@ export class ReservationsController {
             user.id,
         );
     }
+
+    @Post(':id/confirm')
+    @Roles(UserRole.CUSTOMER)
+    confirm(
+        @CurrentUser() user: AuthenticatedUser,
+        @Param('id') id: string,
+    ) {
+        return this.reservationsService.confirm(
+            id,
+            user.id,
+        );
+    }
 }

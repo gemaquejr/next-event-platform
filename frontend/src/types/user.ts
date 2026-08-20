@@ -1,12 +1,8 @@
-import type { UserRole } from './event';
+import type { UserRole } from './auth';
 
 export interface User {
     id: string;
     name: string;
     email: string;
     role: UserRole;
-}
-
-export interface LoginResponse {
-    access_token: string;
 }

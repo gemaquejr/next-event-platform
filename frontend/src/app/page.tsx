@@ -1,6 +1,7 @@
 import { EventCard } from '@/components/EventCard/EventCard';
 import { apiFetch } from '@/services/api';
 import type { Event } from '@/types/event';
+import { Navbar } from '@/components/Navbar/Navbar';
 
 import styles from './page.module.css';
 
@@ -20,6 +21,7 @@ export default async function Home() {
 
   return (
     <main>
+      <Navbar />
       <section className={styles.hero}>
         <div className={styles.heroContent}>
           <span className={styles.eyebrow}>

@@ -1,0 +1,172 @@
+.page {
+    min-height: 100vh;
+    padding: 40px 0 80px;
+    background: #f9fafb;
+}
+
+.container {
+    width: min(1120px, calc(100% - 40px));
+    margin: 0 auto;
+}
+
+.back {
+    display: inline-block;
+    margin-bottom: 32px;
+    color: #6b7280;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.back:hover {
+    color: #111827;
+}
+
+.hero {
+    min-height: 360px;
+    display: flex;
+    align-items: end;
+    overflow: hidden;
+    border-radius: 20px;
+    background:
+        linear-gradient(135deg,
+            #111827,
+            #374151);
+    color: #ffffff;
+}
+
+.heroContent {
+    width: 100%;
+    padding: 48px;
+}
+
+.type {
+    display: inline-block;
+    margin-bottom: 16px;
+    color: #d1d5db;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.hero h1 {
+    max-width: 800px;
+    margin: 0;
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    line-height: 1;
+    letter-spacing: -0.04em;
+}
+
+.description {
+    max-width: 680px;
+    margin: 24px 0 0;
+    color: #d1d5db;
+    font-size: 1.05rem;
+    line-height: 1.7;
+}
+
+.content {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 32px;
+    margin-top: 32px;
+}
+
+.details {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    background: #e5e7eb;
+}
+
+.detail {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 150px;
+    padding: 24px;
+    background: #ffffff;
+}
+
+.label {
+    color: #6b7280;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.detail strong {
+    color: #111827;
+    font-size: 1.05rem;
+}
+
+.detail>span:not(.label) {
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+.reservation {
+    display: flex;
+    flex-direction: column;
+    align-self: start;
+    padding: 28px;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    background: #ffffff;
+}
+
+.price {
+    margin-top: 8px;
+    color: #111827;
+    font-size: 2rem;
+}
+
+.reservation p {
+    margin: 4px 0 24px;
+    color: #6b7280;
+}
+
+.reserveButton {
+    display: block;
+    padding: 14px 20px;
+    border-radius: 10px;
+    background: #111827;
+    color: #ffffff;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+    transition: background 0.2s ease;
+}
+
+.reserveButton:hover {
+    background: #374151;
+}
+
+@media (max-width: 800px) {
+    .content {
+        grid-template-columns: 1fr;
+    }
+
+    .reservation {
+        order: -1;
+    }
+}
+
+@media (max-width: 600px) {
+    .page {
+        padding: 24px 0 56px;
+    }
+
+    .heroContent {
+        padding: 32px 24px;
+    }
+
+    .details {
+        grid-template-columns: 1fr;
+    }
+}

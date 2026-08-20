@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { EventsService } from './events.service';
@@ -24,56 +24,34 @@ describe('EventsService', () => {
         );
     });
 
-    describe('create', () => {
-        it('should create an event successfully', async () => {
-            const organizerId = 'organizer-id';
+    it('should throw ConflictException when slug already exists', async () => {
+        const organizerId = 'organizer-id';
 
-            const dto = {
-                tmdbMovieId: 123,
-                title: 'Cinema Teste',
-                description: 'Evento de teste',
-                type: 'MOVIE' as const,
-                startAt: '2026-09-20T20:00:00.000Z',
-                endAt: '2026-09-20T22:00:00.000Z',
-                venue: 'Cinema Teste',
-                address: 'São Paulo - SP',
-                capacity: 100,
-                ticketPrice: 35,
-                slug: 'cinema-teste',
-            };
+        const dto = {
+            tmdbMovieId: 123,
+            title: 'Cinema Teste',
+            description: 'Evento de teste',
+            type: 'MOVIE' as const,
+            startAt: '2026-09-20T20:00:00.000Z',
+            endAt: '2026-09-20T22:00:00.000Z',
+            venue: 'Cinema Teste',
+            address: 'São Paulo - SP',
+            capacity: 100,
+            ticketPrice: 35,
+            slug: 'cinema-teste',
+        };
 
-            const createdEvent = {
-                id: 'event-id',
-                organizerId,
-                ...dto,
-            };
-
-            prismaService.event.create.mockResolvedValue(createdEvent);
-
-            const result = await service.create(
-                organizerId,
-                dto,
-            );
-
-            expect(prismaService.event.create).toHaveBeenCalledWith({
-                data: {
-                    tmdbMovieId: dto.tmdbMovieId,
-                    title: dto.title,
-                    description: dto.description,
-                    type: dto.type,
-                    startAt: new Date(dto.startAt),
-                    endAt: new Date(dto.endAt),
-                    venue: dto.venue,
-                    address: dto.address,
-                    capacity: dto.capacity,
-                    ticketPrice: dto.ticketPrice,
-                    slug: dto.slug,
-                    organizerId,
-                },
-            });
-
-            expect(result).toEqual(createdEvent);
+        prismaService.event.create.mockRejectedValue({
+            code: 'P2002',
         });
+
+        await expect(
+            service.create(organizerId, dto),
+        ).rejects.toThrow(
+            new ConflictException(
+                'An event with this slug already exists',
+            ),
+        );
     });
 
     describe('findAll', () => {

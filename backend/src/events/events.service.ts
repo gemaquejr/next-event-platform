@@ -1,4 +1,5 @@
 import {
+    ConflictException,
     Injectable,
     NotFoundException,
 } from '@nestjs/common';
@@ -13,7 +14,10 @@ export class EventsService {
         private readonly prisma: PrismaService,
     ) { }
 
-    async create(organizerId: string, createEventDto: CreateEventDto) {
+    async create(
+        organizerId: string,
+        createEventDto: CreateEventDto,
+    ) {
         const {
             tmdbMovieId,
             startAt,
@@ -22,16 +26,31 @@ export class EventsService {
             ...eventData
         } = createEventDto;
 
-        return this.prisma.event.create({
-            data: {
-                ...eventData,
-                organizerId,
-                tmdbMovieId,
-                startAt: new Date(startAt),
-                endAt: endAt ? new Date(endAt) : undefined,
-                ticketPrice,
-            },
-        });
+        try {
+            return await this.prisma.event.create({
+                data: {
+                    ...eventData,
+                    organizerId,
+                    tmdbMovieId,
+                    startAt: new Date(startAt),
+                    endAt: endAt ? new Date(endAt) : undefined,
+                    ticketPrice,
+                },
+            });
+        } catch (error) {
+            if (
+                error &&
+                typeof error === 'object' &&
+                'code' in error &&
+                error.code === 'P2002'
+            ) {
+                throw new ConflictException(
+                    'An event with this slug already exists',
+                );
+            }
+
+            throw error;
+        }
     }
 
     async findAll() {

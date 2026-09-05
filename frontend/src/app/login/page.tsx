@@ -7,13 +7,13 @@ import {
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-import { apiFetch } from '@/services/api';
-import type { LoginResponse } from '@/types/auth';
+import { useAuth } from '@/contexts/AuthContext';
 
 import styles from './page.module.css';
 
 export default function LoginPage() {
     const router = useRouter();
+    const { login } = useAuth();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -30,30 +30,9 @@ export default function LoginPage() {
         setLoading(true);
 
         try {
-            const response =
-                await apiFetch<LoginResponse>(
-                    '/auth/login',
-                    {
-                        method: 'POST',
-                        body: JSON.stringify({
-                            email,
-                            password,
-                        }),
-                    },
-                );
-
-            localStorage.setItem(
-                'accessToken',
-                response.accessToken,
-            );
-
-            localStorage.setItem(
-                'user',
-                JSON.stringify(response.user),
-            );
+            await login(email, password);
 
             router.push('/');
-            router.refresh();
         } catch (error) {
             setError(
                 error instanceof Error

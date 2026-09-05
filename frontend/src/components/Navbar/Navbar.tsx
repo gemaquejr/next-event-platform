@@ -1,42 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
 
-import type { User } from '@/types/auth';
+import { useAuth } from '@/contexts/AuthContext';
 
 import styles from './Navbar.module.css';
 
-function getStoredUser(): User | null {
-    if (typeof window === 'undefined') {
-        return null;
-    }
-
-    const storedUser =
-        localStorage.getItem('user');
-
-    if (!storedUser) {
-        return null;
-    }
-
-    try {
-        return JSON.parse(storedUser) as User;
-    } catch {
-        localStorage.removeItem('user');
-        return null;
-    }
-}
-
 export function Navbar() {
-    const [user, setUser] =
-        useState<User | null>(getStoredUser);
-
-    function handleLogout() {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('user');
-
-        setUser(null);
-    }
+    const { user, logout } = useAuth();
 
     return (
         <nav className={styles.navbar}>
@@ -56,7 +27,7 @@ export function Navbar() {
 
                         <button
                             type="button"
-                            onClick={handleLogout}
+                            onClick={logout}
                             className={styles.logoutButton}
                         >
                             Sair
